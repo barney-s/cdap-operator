@@ -1,0 +1,24 @@
+apiVersion: io.cdap/v1alpha1
+kind: CDAP
+metadata:
+  name: cdap-instance1
+spec:
+  image: gcr.io/cloud-datalogic-images/cloud-datalogic-backend:5.1.2
+  services:
+    - type: Messaging
+      instances: 1
+      resources:
+        requests:
+          memory: "2.5Gi"
+          cpu: "500m"
+        limits:
+          memory: "2.5Gi"
+          cpu: "900m"
+    - type: MetricsProcessor
+      instances: 1
+    - type: MetricsQuery
+      instances: 1
+    - type: LogsProcessor
+      instances: 1
+    - type: LogsQuery
+      instances: 1
