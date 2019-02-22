@@ -3,8 +3,15 @@ kind: CDAP
 metadata:
   name: cdap-instance1
 spec:
+  # TODO: Use 6.0.0-SNAPSHOT once it is available, and remove SNAPSHOT when 6.0.0 is released
   image: gcr.io/cloud-datalogic-images/cloud-datalogic-backend:5.1.2
   services:
+    - type: AppFabric
+      instances: 1
+    - type: LogsProcessor
+      instances: 1
+    - type: LogsQuery
+      instances: 1
     - type: Messaging
       instances: 1
       resources:
@@ -14,11 +21,13 @@ spec:
         limits:
           memory: "2.5Gi"
           cpu: "900m"
+    - type: Metadata
+      instances: 1
     - type: MetricsProcessor
       instances: 1
     - type: MetricsQuery
       instances: 1
-    - type: LogsProcessor
+    - type: UserInterface
       instances: 1
-    - type: LogsQuery
+    - type: Router
       instances: 1

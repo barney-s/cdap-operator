@@ -12,16 +12,15 @@ import (
 type ServiceType string
 
 const (
-	// MessagingService is the name for the messaging service
-	MessagingService ServiceType = "Messaging"
-	// MetricsProcessorService is the name for the metrics processor service
-	MetricsProcessorService ServiceType = "MetricsProcessor"
-	// MetricsQueryService is the name for the metrics query service
-	MetricsQueryService ServiceType = "MetricsQuery"
-	// LogsProcessorService is the name of the logs processor service
+	AppFabricService ServiceType = "AppFabric"
 	LogsProcessorService ServiceType = "LogsProcessor"
-	// LogsQueryService is the name of the logs query service
 	LogsQueryService ServiceType = "LogsQuery"
+	MessagingService ServiceType = "Messaging"
+	MetadataService ServiceType = "Metadata"
+	MetricsProcessorService ServiceType = "MetricsProcessor"
+	MetricsQueryService ServiceType = "MetricsQuery"
+	UserInterfaceService ServiceType = "UserInterface"
+	RouterService ServiceType = "Router"
 )
 
 // CDAPSpec defines the desired state of CDAP
