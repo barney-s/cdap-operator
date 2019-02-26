@@ -2,6 +2,7 @@ package cdap
 
 import (
 	"context"
+	"strings"
 
 	iov1alpha1 "io.cdap/cdap-operator/pkg/apis/io/v1alpha1"
 	appv1 "k8s.io/api/apps/v1"
@@ -98,41 +99,36 @@ func (r *ReconcileCDAP) Reconcile(request reconcile.Request) (reconcile.Result, 
 	}
 
 	for _, service := range instance.Spec.Services {
-		serviceStatefulSet := createStateSetForService(instance.Name, request.Namespace, instance.Spec.Image, &service)
-		reqLogger.Info("Service", "type", service.Type, "StatefulSet", serviceStatefulSet)
-	}
+		statefulSet := createStateSetForService(instance.Name, request.Namespace, instance.Spec.Image, &service)
+		reqLogger.Info("Service", "type", service.Type, "StatefulSet", statefulSet)
 
-	// Define a new StatefulSet object
-	statefulSet := newStatefulSetForCR(instance)
-
-	// Set CDAP instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, statefulSet, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// Check if this StatefulSet already exists
-	found := &appv1.StatefulSet{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: statefulSet.Name, Namespace: statefulSet.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Deploying new StatefulSet", "Namespace", statefulSet.Namespace, "Name", statefulSet.Name)
-		err = r.client.Create(context.TODO(), statefulSet)
-		if err != nil {
+		// Set CDAP instance as the owner and controller
+		if err := controllerutil.SetControllerReference(instance, statefulSet, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
 
-		// StatefulSet created successfully - don't requeue
-		return reconcile.Result{}, nil
-	} else if err != nil {
-		return reconcile.Result{}, err
+		// Check if this StatefulSet already exists
+		found := &appv1.StatefulSet{}
+		err := r.client.Get(context.TODO(), types.NamespacedName{Name: statefulSet.Name, Namespace: statefulSet.Namespace}, found)
+		if err != nil && errors.IsNotFound(err) {
+			reqLogger.Info("Deploying new StatefulSet", "Namespace", statefulSet.Namespace, "Name", statefulSet.Name)
+			err = r.client.Create(context.TODO(), statefulSet)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		} else if err != nil {
+			return reconcile.Result{}, err
+		}
+		reqLogger.Info("Skip reconcile: StatefulSet already exists", "Namespace", found.Namespace, "Name", found.Name)
+		// StatefulSet already exists - don't requeue
 	}
 
-	// StatefulSet already exists - don't requeue
-	reqLogger.Info("Skip reconcile: StatefulSet already exists", "Namespace", found.Namespace, "Name", found.Name)
 	return reconcile.Result{}, nil
 }
 
 func createStateSetForService(instanceName string, namespace string, image string, service *iov1alpha1.CDAPService) *appv1.StatefulSet {
-	name := instanceName + "-" + string(service.Type)
+	// StatefulSet.apps "cdap-instance1-AppFabric" is invalid: metadata.name: Invalid value: "cdap-instance1-AppFabric": a DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')"
+	name := instanceName + "-" + strings.ToLower(string(service.Type))
 	labels := map[string]string{
 		"app": name,
 	}
@@ -177,70 +173,7 @@ func createStateSetForService(instanceName string, namespace string, image strin
 						AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("1Gi"),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func newStatefulSetForCR(cr *iov1alpha1.CDAP) *appv1.StatefulSet {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	replicas := int32(1)
-
-	return &appv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name,
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: appv1.StatefulSetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Replicas: &replicas,
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:    cr.Name,
-							Image:   cr.Spec.Image,
-							Command: []string{"sh", "-c", "/opt/cdap/sandbox/bin/cdap sandbox start --foreground"},
-							Ports: []corev1.ContainerPort{
-								{
-									ContainerPort: 11015,
-									Name:          cr.Name,
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "data",
-									MountPath: "/opt/cdap/sandbox-5.1.0/data",
-									SubPath:   "cdap",
-								},
-							},
-						},
-					},
-				},
-			},
-			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "data",
-					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("1Gi"),
+								corev1.ResourceStorage: resource.MustParse("6Gi"),
 							},
 						},
 					},
